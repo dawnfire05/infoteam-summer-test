@@ -1,26 +1,80 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Prisma, User } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(private prisma: PrismaService) {}
+
+  async setRefreshToken(userId: number, refreshToken: string) {
+    await this.prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: userId,
+      },
+    });
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async getUserIfRefreshTokenMatches(userId: number, refreshToken: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        refreshTokens: {
+          some: {
+            token: refreshToken,
+          },
+        },
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async invalidateRefreshToken(refreshToken: string) {
+    await this.prisma.refreshToken.delete({
+      where: { token: refreshToken },
+    });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  //post
+  async createUser(data: Prisma.UserCreateInput): Promise<User> {
+    const salt = await bcrypt.genSalt();
+    data.password = await bcrypt.hash(data.password, salt);
+    return this.prisma.user.create({
+      data,
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  //get
+  async getUsers(): Promise<User[]> {
+    const users = await this.prisma.user.findMany();
+    return users;
+  }
+
+  //get
+  async getUserById(id: number): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: { id },
+    });
+  }
+
+  async getUserByUserName(name: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: { username: name },
+    });
+  }
+
+  //put
+  async updateUser(id: number, data: Prisma.UserUpdateInput): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
+
+  //delete
+  async deleteUser(id: number): Promise<User> {
+    return this.prisma.user.delete({
+      where: { id },
+    });
   }
 }
