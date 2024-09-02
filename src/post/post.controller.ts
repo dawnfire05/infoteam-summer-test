@@ -9,7 +9,7 @@ import {
   Patch,
   Delete,
   Req,
-} from '@nestjs/common';
+} from '@nestjs/common'
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
